@@ -19,7 +19,7 @@
 
 <div id="app" class="max-w-6xl mx-auto px-4 pt-6">
     <!-- Panel de Control de API -->
-    <div class="mb-8 p-6 bg-slate-900 rounded-3xl shadow-xl text-white flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="mb-8 p-6 bg-slate-900 rounded-3xl shadow-xl text-white flex flex-col md:ruw-row items-center justify-between gap-4">
         <div class="flex items-center gap-4">
             <div id="status-dot" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             <div>
@@ -71,7 +71,9 @@
                 <div id="error-console" class="hidden mt-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-left text-xs font-mono text-red-600">
                     <p class="font-bold mb-1 underline uppercase">Error de API:</p>
                     <p id="error-text"></p>
-                    <p class="mt-2 text-slate-500 italic font-sans text-[10px]">Solución: Revisa que tu API Key sea de Google AI Studio y no de Google Cloud.</p>
+                    <p class="mt-2 text-slate-500 italic font-sans text-[10px]">
+                        Asegúrate de usar una API Key de <strong>Google AI Studio</strong> (no Google Cloud). Si el error persiste, intenta refrescar la página.
+                    </p>
                 </div>
             </div>
             <div id="questions-container" class="hidden space-y-8"></div>
@@ -103,7 +105,7 @@
         if(val) { 
             localStorage.setItem('uaa_key_v6', val); 
             updateStatus(true); 
-            alert("✅ Clave guardada localmente.");
+            alert("✅ Clave guardada satisfactoriamente.");
             location.reload();
         }
     }
@@ -142,7 +144,6 @@
                             const k = `w${w.week}-d${dIdx+1}-e${e}`;
                             const prevK = `w${w.week}-d${dIdx+1}-e${e-1}`;
                             const done = completedExams[k];
-                            // Desbloqueado si es Nivel 1 O si el anterior está hecho
                             const isUnlocked = e === 1 || completedExams[prevK];
                             
                             dayButtons += `<button onclick="startExam('${day}', '${w.focus}', '${k}')" 
@@ -167,8 +168,30 @@
         document.getElementById('global-score').textContent = localStorage.getItem('uaa_score_v6') || 0;
     }
 
+    // Lógica de reintento exponencial para evitar errores 429 o fallos temporales
+    async function fetchWithRetry(url, options, retries = 5, backoff = 1000) {
+        try {
+            const res = await fetch(url, options);
+            if (res.ok) return await res.json();
+            
+            if (retries > 0 && (res.status === 429 || res.status >= 500)) {
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                return fetchWithRetry(url, options, retries - 1, backoff * 2);
+            }
+            
+            const errorData = await res.json();
+            throw new Error(errorData.error?.message || `Error de servidor: ${res.status}`);
+        } catch (e) {
+            if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                return fetchWithRetry(url, options, retries - 1, backoff * 2);
+            }
+            throw e;
+        }
+    }
+
     async function startExam(theme, cat, key) {
-        const apiK = localStorage.getItem('uaa_key_v6') || document.getElementById('user-api-key').value;
+        const apiK = localStorage.getItem('uaa_key_v6');
         if(!apiK) { alert("⚠️ Primero debes ingresar tu API Key."); return; }
         
         currentExamKey = key;
@@ -177,16 +200,16 @@
         document.getElementById('questions-container').classList.add('hidden');
         document.getElementById('error-console').classList.add('hidden');
         document.getElementById('modal-footer').classList.add('hidden');
-        document.getElementById('modal-title').textContent = "Evaluación: " + theme;
+        document.getElementById('loading-msg').textContent = "Generando preguntas con IA...";
 
-        // FIXED: Using the standard stable model for AI Studio (gemini-1.5-flash)
+        // Usamos gemini-1.5-flash que es el modelo más estable para este tipo de tareas
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiK}`;
         
-        const prompt = `Genera un examen EXANI-II de 15 preguntas JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
-        Importante: Responde SOLO con el JSON. Estructura: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
+        const prompt = `Genera un examen EXANI-II de 15 preguntas en formato JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
+        Importante: Responde ÚNICAMENTE con el objeto JSON. Estructura requerida: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
 
         try {
-            const res = await fetch(url, {
+            const data = await fetchWithRetry(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -198,23 +221,24 @@
                 })
             });
 
-            const data = await res.json();
-            
-            if (data.error) {
-                throw new Error(`${data.error.message}`);
-            }
-
             const rawText = data.candidates[0].content.parts[0].text;
-            const cleanedText = rawText.replace(/```json|```/g, "").trim();
+            // Limpieza robusta del JSON por si la IA incluye markdown
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("La respuesta de la IA no contiene un formato JSON válido.");
             
-            currentQuestions = JSON.parse(cleanedText).questions;
-            currentStep = 0; currentAnswers = [];
+            const parsed = JSON.parse(jsonMatch[0]);
+            currentQuestions = parsed.questions;
+            
+            if (!currentQuestions || currentQuestions.length === 0) throw new Error("No se generaron preguntas.");
+
+            currentStep = 0; 
+            currentAnswers = [];
             showQuestion();
         } catch(e) {
-            document.getElementById('loading-msg').textContent = "Error al conectar con la IA";
+            document.getElementById('loading-msg').textContent = "Error de Conexión";
             document.getElementById('error-console').classList.remove('hidden');
             document.getElementById('error-text').textContent = e.message;
-            console.error(e);
+            console.error("Fallo de API:", e);
         }
     }
 
