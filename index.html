@@ -72,7 +72,7 @@
                     <p class="font-bold mb-1 underline uppercase">Error de API:</p>
                     <p id="error-text"></p>
                     <p class="mt-2 text-slate-500 italic font-sans text-[10px]">
-                        Asegúrate de usar una API Key de <strong>Google AI Studio</strong>. Si el error persiste ("model not found"), es posible que debas verificar que la Key esté activa en <a href="https://aistudio.google.com/" target="_blank" class="underline">AI Studio</a>.
+                        Asegúrate de usar una API Key de <strong>Google AI Studio</strong>. Si el error persiste ("model not found"), intenta usar un modelo como <code>gemini-1.5-flash</code> o <code>gemini-1.5-pro</code>.
                     </p>
                 </div>
             </div>
@@ -168,18 +168,18 @@
         document.getElementById('global-score').textContent = localStorage.getItem('uaa_score_v6') || 0;
     }
 
-    async function fetchWithRetry(url, options, retries = 5, backoff = 1000) {
+    async function fetchWithRetry(url, options, retries = 3, backoff = 1500) {
         try {
             const res = await fetch(url, options);
-            if (res.ok) return await res.json();
+            const data = await res.json();
+            if (res.ok) return data;
             
             if (retries > 0 && (res.status === 429 || res.status >= 500)) {
                 await new Promise(resolve => setTimeout(resolve, backoff));
                 return fetchWithRetry(url, options, retries - 1, backoff * 2);
             }
             
-            const errorData = await res.json();
-            throw new Error(errorData.error?.message || `Error de servidor: ${res.status}`);
+            throw new Error(data.error?.message || `Error ${res.status}`);
         } catch (e) {
             if (retries > 0) {
                 await new Promise(resolve => setTimeout(resolve, backoff));
@@ -201,11 +201,12 @@
         document.getElementById('modal-footer').classList.add('hidden');
         document.getElementById('loading-msg').textContent = "Generando preguntas con IA...";
 
-        // Cambio a gemini-1.5-flash-latest para mayor compatibilidad con v1beta
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiK}`;
+        // Usamos el identificador base del modelo para evitar el error de "not found" en v1beta
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiK}`;
         
-        const prompt = `Genera un examen EXANI-II de 15 preguntas en formato JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
-        Importante: Responde ÚNICAMENTE con el objeto JSON. Estructura requerida: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
+        const prompt = `Actúa como un experto en EXANI-II. Genera un examen de 15 preguntas de opción múltiple sobre el tema "${theme}" de la categoría "${cat}". 
+        Dificultad: ${aiDifficulty}/10. 
+        Formato JSON estricto: {"questions":[{"q":"pregunta","options":["opción A","opción B","opción C","opción D"],"correct":índice_entero_0_a_3}]}`;
 
         try {
             const data = await fetchWithRetry(url, {
@@ -220,23 +221,27 @@
                 })
             });
 
+            if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                throw new Error("La IA devolvió una respuesta vacía.");
+            }
+
             const rawText = data.candidates[0].content.parts[0].text;
-            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("La respuesta de la IA no contiene un formato JSON válido.");
+            // Limpieza básica de la respuesta por si la IA incluye markdown
+            const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
             
-            const parsed = JSON.parse(jsonMatch[0]);
             currentQuestions = parsed.questions;
-            
-            if (!currentQuestions || currentQuestions.length === 0) throw new Error("No se generaron preguntas.");
+            if (!currentQuestions || currentQuestions.length === 0) throw new Error("No se encontraron preguntas en el JSON.");
 
             currentStep = 0; 
             currentAnswers = [];
             showQuestion();
         } catch(e) {
-            document.getElementById('loading-msg').textContent = "Error de Conexión";
+            document.getElementById('exam-loading').classList.remove('hidden');
+            document.getElementById('loading-msg').textContent = "Fallo en la Generación";
             document.getElementById('error-console').classList.remove('hidden');
             document.getElementById('error-text').textContent = e.message;
-            console.error("Fallo de API:", e);
+            console.error("Error completo:", e);
         }
     }
 
