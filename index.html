@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAA AI Trainer | Corregido</title>
+    <title>UAA Master | Conexión Estable</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -12,36 +12,35 @@
         .glass-card { background: rgba(255, 255, 255, 0.9); border: 1px solid #e2e8f0; }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #2563eb; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .locked { filter: grayscale(1); opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body class="antialiased pb-20">
 
 <div id="app" class="max-w-6xl mx-auto px-4 pt-6">
-    <!-- Panel de API -->
+    <!-- Panel de Control de API -->
     <div class="mb-8 p-6 bg-slate-900 rounded-3xl shadow-xl text-white flex flex-col md:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-            <div id="status-dot" class="w-3 h-3 bg-red-50 rounded-full animate-pulse"></div>
+            <div id="status-dot" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             <div>
-                <h2 class="font-bold text-lg leading-tight">Motor de IA Gemini</h2>
-                <p id="status-text" class="text-xs text-slate-400">Introduce tu API Key para comenzar</p>
+                <h2 class="font-bold text-lg leading-tight">Estado de la IA</h2>
+                <p id="status-text" class="text-xs text-slate-400">Verificando conexión...</p>
             </div>
         </div>
         <div class="flex gap-2 w-full md:w-auto">
-            <input type="password" id="user-api-key" placeholder="Pega tu clave aquí..." 
-                   class="w-full md:w-80 px-5 py-3 rounded-2xl bg-white/10 border border-white/20 text-sm focus:outline-none">
-            <button onclick="saveKey()" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-bold hover:bg-blue-700">Guardar</button>
+            <input type="password" id="user-api-key" placeholder="Pega tu API Key de Gemini..." 
+                   class="w-full md:w-80 px-5 py-3 rounded-2xl bg-white/10 border border-white/20 text-sm focus:outline-none focus:bg-white/20 transition-all">
+            <button onclick="saveKey()" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-bold hover:bg-blue-700 transition-all">Activar IA</button>
         </div>
     </div>
 
     <header class="mb-10 flex justify-between items-end">
         <div>
             <h1 class="text-4xl font-black text-slate-900 tracking-tighter">UAA Master</h1>
-            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Nivel de dificultad: <span id="diff-val">1</span>/10</p>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Preparación EXANI-II | Nivel: <span id="diff-val">1</span></p>
         </div>
-        <div class="glass-card px-6 py-4 rounded-3xl text-center">
+        <div class="glass-card px-6 py-4 rounded-3xl text-center shadow-sm">
             <span id="global-score" class="text-3xl font-black text-blue-600">0</span>
-            <p class="text-[10px] text-slate-400 font-bold uppercase">Aciertos Totales</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Puntos Acumulados</p>
         </div>
     </header>
 
@@ -61,36 +60,37 @@
 <div id="exam-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         <div class="px-10 py-8 border-b flex justify-between items-center">
-            <h3 id="modal-title" class="text-2xl font-black text-slate-900">Preparando Examen...</h3>
+            <h3 id="modal-title" class="text-2xl font-black text-slate-900">Examen UAA</h3>
             <button onclick="closeExam()" class="text-slate-400 text-3xl">&times;</button>
         </div>
-        <div id="modal-body" class="p-10 overflow-y-auto flex-grow text-center">
-            <div id="exam-loading">
+        <div id="modal-body" class="p-10 overflow-y-auto flex-grow">
+            <div id="exam-loading" class="text-center py-10">
                 <div class="loader mx-auto mb-6"></div>
-                <p id="loading-msg" class="text-slate-600 font-medium">Generando reactivos personalizados...</p>
+                <p id="loading-msg" class="text-slate-600 font-medium">Conectando con Google AI...</p>
                 <div id="error-console" class="hidden mt-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-left text-xs font-mono text-red-600">
-                    <p class="font-bold mb-1 underline">ERROR DETECTADO:</p>
+                    <p class="font-bold mb-1 underline uppercase">Error de API:</p>
                     <p id="error-text"></p>
+                    <p class="mt-2 text-slate-500 italic font-sans text-[10px]">Solución: Revisa que tu API Key sea de Google AI Studio y no de Google Cloud.</p>
                 </div>
             </div>
-            <div id="questions-container" class="hidden text-left space-y-8"></div>
+            <div id="questions-container" class="hidden space-y-8"></div>
         </div>
         <div id="modal-footer" class="px-10 py-8 border-t hidden flex justify-between items-center bg-slate-50">
             <span id="progress-text" class="text-xs font-black text-slate-400 uppercase"></span>
-            <button id="next-btn" onclick="handleNext()" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black">Siguiente</button>
+            <button id="next-btn" onclick="handleNext()" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg">Siguiente Pregunta</button>
         </div>
     </div>
 </div>
 
 <script>
     const plan = [
-        { week: 1, title: "Pensamiento Matemático", days: ["Razones", "Sucesiones", "Porcentajes", "Probabilidad", "Álgebra"], focus: "Aritmética" },
-        { week: 2, title: "Pensamiento Científico", days: ["Física I", "Física II", "Química I", "Biología", "Lógica"], focus: "Ciencias" }
+        { week: 1, title: "Pensamiento Matemático", days: ["Razones y Proporciones", "Sucesiones", "Porcentajes", "Probabilidad", "Álgebra"], focus: "Aritmética" },
+        { week: 2, title: "Pensamiento Científico", days: ["Cinemática", "Dinámica", "Termodinámica", "Química", "Biología"], focus: "Física" }
     ];
 
-    let userStats = JSON.parse(localStorage.getItem('uaa_stats_v4')) || { 'Física': 10, 'Cálculo': 10, 'Aritmética': 10, 'Comprensión': 10, 'Redacción': 10, 'Lógica': 10 };
-    let completedExams = JSON.parse(localStorage.getItem('uaa_completed_v4')) || {};
-    let aiDifficulty = parseInt(localStorage.getItem('uaa_diff_v4')) || 1;
+    let userStats = JSON.parse(localStorage.getItem('uaa_stats_v5')) || { 'Física': 10, 'Cálculo': 10, 'Aritmética': 10, 'Comprensión': 10, 'Redacción': 10, 'Lógica': 10 };
+    let completedExams = JSON.parse(localStorage.getItem('uaa_completed_v5')) || {};
+    let aiDifficulty = parseInt(localStorage.getItem('uaa_diff_v5')) || 1;
     let currentQuestions = [];
     let currentStep = 0;
     let currentAnswers = [];
@@ -99,20 +99,25 @@
 
     function saveKey() {
         const val = document.getElementById('user-api-key').value.trim();
-        if(val) { localStorage.setItem('uaa_key_v4', val); updateStatus(true); alert("Clave guardada"); }
+        if(val) { 
+            localStorage.setItem('uaa_key_v5', val); 
+            updateStatus(true); 
+            alert("✅ Clave guardada localmente.");
+            location.reload();
+        }
     }
 
     function updateStatus(ok) {
-        document.getElementById('status-dot').className = ok ? "w-3 h-3 bg-green-500 rounded-full" : "w-3 h-3 bg-red-500 rounded-full animate-pulse";
-        document.getElementById('status-text').textContent = ok ? "IA Conectada y lista" : "Falta API Key";
+        document.getElementById('status-dot').className = ok ? "w-3 h-3 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "w-3 h-3 bg-red-500 rounded-full animate-pulse";
+        document.getElementById('status-text').textContent = ok ? "IA Conectada satisfactoriamente" : "API Key requerida para funcionar";
     }
 
     function initRadar() {
         const ctx = document.getElementById('radarChart').getContext('2d');
         radarChart = new Chart(ctx, {
             type: 'radar',
-            data: { labels: Object.keys(userStats), datasets: [{ data: Object.values(userStats), backgroundColor: 'rgba(37, 99, 235, 0.1)', borderColor: '#2563eb', borderWidth: 2 }] },
-            options: { scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+            data: { labels: Object.keys(userStats), datasets: [{ label: 'Nivel Actual', data: Object.values(userStats), backgroundColor: 'rgba(37, 99, 235, 0.1)', borderColor: '#2563eb', borderWidth: 2, pointBackgroundColor: '#2563eb' }] },
+            options: { scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: '#e2e8f0' } } }, plugins: { legend: { display: false } } }
         });
     }
 
@@ -121,40 +126,46 @@
         container.innerHTML = "";
         plan.forEach((w, wIdx) => {
             const div = document.createElement('div');
-            div.innerHTML = `<h3 class="font-black text-xl mb-4">Semana ${w.week}: ${w.title}</h3>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            div.innerHTML = `<h3 class="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><span class="w-1.5 h-6 bg-blue-600 rounded-full"></span> Semana ${w.week}: ${w.title}</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     ${w.days.map((day, dIdx) => `
-                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <p class="text-[9px] font-black text-blue-500 mb-2 uppercase">${day}</p>
-                            ${[1,2,3,4,5].map(e => {
-                                const k = `w${w.week}-d${dIdx+1}-e${e}`;
-                                const done = completedExams[k];
-                                return `<button onclick="startExam('${day}', '${w.focus}', '${k}')" class="w-full py-1.5 mb-1 rounded-lg text-[9px] font-bold border ${done ? 'bg-green-500 text-white' : 'text-slate-400 hover:border-blue-400'}">NIVEL ${e}</button>`;
-                            }).join('')}
+                        <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                            <p class="text-[9px] font-black text-blue-500 mb-3 uppercase tracking-tighter">${day}</p>
+                            <div class="space-y-1">
+                                ${[1,2,3,4,5].map(e => {
+                                    const k = `w${w.week}-d${dIdx+1}-e${e}`;
+                                    const done = completedExams[k];
+                                    return `<button onclick="startExam('${day}', '${w.focus}', '${k}')" 
+                                        class="w-full py-1.5 rounded-xl text-[9px] font-bold border transition-all ${done ? 'bg-green-500 border-green-500 text-white' : 'text-slate-400 hover:border-blue-500 hover:text-blue-500'}">
+                                        NIVEL ${e} ${done ? '✓' : ''}
+                                    </button>`;
+                                }).join('')}
+                            </div>
                         </div>
                     `).join('')}
                 </div>`;
             container.appendChild(div);
         });
         document.getElementById('diff-val').textContent = aiDifficulty;
-        document.getElementById('global-score').textContent = localStorage.getItem('uaa_score_v4') || 0;
+        document.getElementById('global-score').textContent = localStorage.getItem('uaa_score_v5') || 0;
     }
 
     async function startExam(theme, cat, key) {
-        const apiK = localStorage.getItem('uaa_key_v4') || document.getElementById('user-api-key').value;
-        if(!apiK) { alert("Ingresa tu API Key"); return; }
+        const apiK = localStorage.getItem('uaa_key_v5') || document.getElementById('user-api-key').value;
+        if(!apiK) { alert("⚠️ Primero debes ingresar tu API Key."); return; }
         
         currentExamKey = key;
         document.getElementById('exam-modal').classList.remove('hidden');
         document.getElementById('exam-loading').classList.remove('hidden');
         document.getElementById('questions-container').classList.add('hidden');
         document.getElementById('error-console').classList.add('hidden');
-        document.getElementById('modal-title').textContent = theme;
+        document.getElementById('modal-title').textContent = "Evaluación: " + theme;
 
-        // CORRECCIÓN DE URL: Usamos el endpoint v1beta con el nombre exacto del modelo
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiK}`;
+        // URL CORREGIDA: Usando gemini-1.5-flash-latest y endpoint simplificado
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiK}`;
         
-        const prompt = `Genera un examen de 15 preguntas JSON sobre ${theme} dificultad ${aiDifficulty}/10. Formato: {"questions":[{"q":"..","options":["A","B","C","D"],"correct":0}]}`;
+        const prompt = `Genera un examen EXANI-II de 15 preguntas JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
+        Importante: Responde SOLO con el JSON. Estructura: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
 
         try {
             const res = await fetch(url, {
@@ -162,17 +173,24 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
+
             const data = await res.json();
-            if(data.error) throw new Error(data.error.message);
             
-            const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim();
-            currentQuestions = JSON.parse(raw).questions;
+            if (data.error) {
+                throw new Error(`${data.error.message} (Código: ${data.error.status})`);
+            }
+
+            const rawText = data.candidates[0].content.parts[0].text;
+            const cleanedText = rawText.replace(/```json|```/g, "").trim();
+            
+            currentQuestions = JSON.parse(cleanedText).questions;
             currentStep = 0; currentAnswers = [];
             showQuestion();
         } catch(e) {
-            document.getElementById('loading-msg').textContent = "Error de conexión";
+            document.getElementById('loading-msg').textContent = "Error al conectar con la IA";
             document.getElementById('error-console').classList.remove('hidden');
             document.getElementById('error-text').textContent = e.message;
+            console.error(e);
         }
     }
 
@@ -181,16 +199,27 @@
         document.getElementById('questions-container').classList.remove('hidden');
         document.getElementById('modal-footer').classList.remove('hidden');
         const q = currentQuestions[currentStep];
-        document.getElementById('questions-container').innerHTML = `<h4 class="font-bold text-lg mb-6">${q.q}</h4>
-            <div class="space-y-3">${q.options.map((o, i) => `<button onclick="sel(${i})" id="o-${i}" class="w-full p-4 text-left border-2 rounded-xl hover:bg-blue-50 transition-all font-medium">${o}</button>`).join('')}</div>`;
-        document.getElementById('progress-text').textContent = `Pregunta ${currentStep+1}/15`;
+        document.getElementById('questions-container').innerHTML = `
+            <div class="mb-2"><span class="bg-blue-100 text-blue-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Pregunta ${currentStep+1} de 15</span></div>
+            <h4 class="font-bold text-xl text-slate-800 mb-8 leading-tight">${q.q}</h4>
+            <div class="grid grid-cols-1 gap-4">${q.options.map((o, i) => `
+                <button onclick="sel(${i})" id="o-${i}" class="w-full p-5 text-left border-2 border-slate-100 rounded-2xl hover:bg-blue-50 transition-all font-semibold text-slate-700 flex justify-between items-center group">
+                    ${o} <div class="w-5 h-5 rounded-full border-2 border-slate-200"></div>
+                </button>`).join('')}
+            </div>`;
+        document.getElementById('progress-text').textContent = `Progreso: ${Math.round(((currentStep+1)/15)*100)}%`;
     }
 
     let selectedIdx = -1;
     function sel(i) {
         selectedIdx = i;
-        document.querySelectorAll('[id^="o-"]').forEach(b => b.classList.remove('border-blue-600', 'bg-blue-50'));
-        document.getElementById(`o-${i}`).classList.add('border-blue-600', 'bg-blue-50');
+        document.querySelectorAll('[id^="o-"]').forEach(b => {
+            b.classList.remove('border-blue-600', 'bg-blue-50');
+            b.querySelector('div').classList.remove('bg-blue-600', 'border-blue-600');
+        });
+        const active = document.getElementById(`o-${i}`);
+        active.classList.add('border-blue-600', 'bg-blue-50');
+        active.querySelector('div').classList.add('bg-blue-600', 'border-blue-600');
     }
 
     function handleNext() {
@@ -200,19 +229,24 @@
     }
 
     function finish() {
-        let c = 0; currentQuestions.forEach((q, i) => { if(q.correct === currentAnswers[i]) c++; });
-        if(c >= 12) aiDifficulty++;
+        let correctas = 0;
+        currentQuestions.forEach((q, i) => { if(q.correct === currentAnswers[i]) correctas++; });
+        
+        if(correctas >= 13) aiDifficulty = Math.min(10, aiDifficulty + 1);
+        
         completedExams[currentExamKey] = true;
-        localStorage.setItem('uaa_completed_v4', JSON.stringify(completedExams));
-        localStorage.setItem('uaa_diff_v4', aiDifficulty);
-        localStorage.setItem('uaa_score_v4', (parseInt(localStorage.getItem('uaa_score_v4')||0) + c));
+        localStorage.setItem('uaa_completed_v5', JSON.stringify(completedExams));
+        localStorage.setItem('uaa_diff_v5', aiDifficulty);
+        localStorage.setItem('uaa_score_v5', (parseInt(localStorage.getItem('uaa_score_v5')||0) + correctas));
+        
         closeExam(); renderPlan();
+        alert(`¡Examen terminado! Aciertos: ${correctas}/15`);
     }
 
     function closeExam() { document.getElementById('exam-modal').classList.add('hidden'); }
 
     window.onload = () => {
-        const k = localStorage.getItem('uaa_key_v4');
+        const k = localStorage.getItem('uaa_key_v5');
         if(k) { document.getElementById('user-api-key').value = k; updateStatus(true); }
         initRadar(); renderPlan();
     }
