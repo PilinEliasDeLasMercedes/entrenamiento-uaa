@@ -179,7 +179,8 @@
         document.getElementById('modal-footer').classList.add('hidden');
         document.getElementById('modal-title').textContent = "Evaluación: " + theme;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiK}`;
+        // FIXED: Using the specific supported model for this preview environment
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiK}`;
         
         const prompt = `Genera un examen EXANI-II de 15 preguntas JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
         Importante: Responde SOLO con el JSON. Estructura: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
@@ -190,7 +191,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.7 }
+                    generationConfig: { 
+                        temperature: 0.7,
+                        responseMimeType: "application/json"
+                    }
                 })
             });
 
@@ -252,7 +256,6 @@
         let correctas = 0;
         currentQuestions.forEach((q, i) => { if(q.correct === currentAnswers[i]) correctas++; });
         
-        // Solo sube dificultad si sacó casi perfecto
         if(correctas >= 13) aiDifficulty = Math.min(10, aiDifficulty + 1);
         
         completedExams[currentExamKey] = true;
