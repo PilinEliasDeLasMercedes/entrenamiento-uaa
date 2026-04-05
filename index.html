@@ -179,8 +179,8 @@
         document.getElementById('modal-footer').classList.add('hidden');
         document.getElementById('modal-title').textContent = "Evaluación: " + theme;
 
-        // FIXED: Using the specific supported model for this preview environment
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiK}`;
+        // FIXED: Using the standard stable model for AI Studio (gemini-1.5-flash)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiK}`;
         
         const prompt = `Genera un examen EXANI-II de 15 preguntas JSON sobre "${theme}" (${cat}) con dificultad ${aiDifficulty}/10. 
         Importante: Responde SOLO con el JSON. Estructura: {"questions":[{"q":"pregunta","options":["A","B","C","D"],"correct":0}]}`;
